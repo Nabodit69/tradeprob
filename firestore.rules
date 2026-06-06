@@ -1,0 +1,73 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() { return request.auth != null; }
+    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+
+    // User Profile
+    match /users/{userId} {
+      allow get: if isSignedIn();
+      allow create: if isOwner(userId) && isValidUser(incoming());
+      allow update: if isOwner(userId) && isValidUser(incoming()) && 
+                       incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'updatedAt']);
+    }
+
+    function isValidUser(data) {
+      return data.uid is string && data.uid == request.auth.uid &&
+             data.email is string && data.email.size() <= 256 &&
+             data.keys().hasAll(['uid', 'email']);
+    }
+
+    // Strategies
+    match /strategies/{strategyId} {
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow get: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isOwner(incoming().userId) && isValidStrategy(incoming());
+      allow update: if isSignedIn() && isOwner(existing().userId) && isValidStrategy(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['name', 'targetWinRate', 'description', 'isArchived']);
+      allow delete: if isSignedIn() && isOwner(existing().userId);
+    }
+
+    function isValidStrategy(data) {
+      return data.userId is string && data.userId == request.auth.uid &&
+             data.name is string && data.name.size() <= 100 &&
+             data.targetWinRate is number && data.targetWinRate >= 0 && data.targetWinRate <= 100 &&
+             (data.get('isArchived', false) is bool) &&
+             data.keys().hasAll(['userId', 'name', 'targetWinRate', 'createdAt']);
+    }
+
+    // Trades
+    match /trades/{tradeId} {
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow get: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isOwner(incoming().userId) && isValidTrade(incoming()) &&
+                       exists(/databases/$(database)/documents/strategies/$(incoming().strategyId));
+      allow update: if isSignedIn() && isOwner(existing().userId) && isValidTrade(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().strategyId == existing().strategyId &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['entryTime', 'exitTime', 'setup', 'result', 'pips', 'durationMinutes', 'slPips', 'tpPips', 'notes', 'screenshotUrl']);
+      allow delete: if isSignedIn() && isOwner(existing().userId);
+    }
+
+    function isValidTrade(data) {
+      return data.userId is string && data.userId == request.auth.uid &&
+             data.strategyId is string &&
+             data.result in ['Win', 'Loss'] &&
+             data.pips is number &&
+             (data.get('slPips', 0) is number) &&
+             (data.get('tpPips', 0) is number) &&
+             (data.get('notes', '') is string) &&
+             (data.get('screenshotUrl', '') is string) &&
+             data.keys().hasAll(['userId', 'strategyId', 'entryTime', 'exitTime', 'result', 'pips', 'createdAt']);
+    }
+  }
+}
