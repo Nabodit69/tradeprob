@@ -1,56 +1,22 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  TrendingUp, 
-  Clock, 
-  Calendar, 
-  Target, 
-  Plus,
-  Minus,
-  Trash2,
-  Activity,
-  History,
-  AlertTriangle,
-  Zap,
-  LogOut,
-  ChevronDown,
-  Settings,
-  ShieldCheck,
-  Image as ImageIcon,
-  FileText,
-  Archive,
-  ArchiveRestore,
-  Download,
-  Share2,
-  MoreVertical,
-  Copy,
-  Check
+  TrendingUp, Clock, Calendar, Target, Plus, Minus, Trash2, Activity,
+  History, AlertTriangle, Zap, LogOut, ChevronDown, Settings, ShieldCheck,
+  Image as ImageIcon, FileText, Archive, ArchiveRestore, Download, Share2,
+  MoreVertical, Copy, Check
 } from 'lucide-react';
 import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer, 
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
 } from 'recharts';
 import { format } from 'date-fns';
-import { onAuthStateChanged, User } from 'firebase/auth';
-import { 
-  collection, 
-  query, 
-  where, 
-  onSnapshot, 
-  addDoc, 
-  setDoc,
-  deleteDoc,
-  doc, 
-  orderBy
-} from 'firebase/firestore';
+
+// 1. Supabase Imports (Replacing Firebase)
+import { User } from '@supabase/supabase-js';
+import { supabase } from './lib/supabase'; // Make sure this file exports your initialized Supabase client
+
 import { Trade, SetupType, Result, Stats, Strategy } from './types';
 import { calculateTradeData, calculateProbabilities } from './lib/calculations';
-import { auth, db, signInWithGoogle, logout, handleFirestoreError, OperationType } from './lib/firebase';
 import { exportTradesToCSV } from './lib/export';
 import LandingPage from './components/LandingPage';
 
@@ -93,60 +59,110 @@ export default function App() {
     description: ''
   });
 
-  // Auth Listener
+  // 2. Supabase Auth Functions
+  const signInWithGoogle = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+    if (error) console.error("Error signing in:", error);
+  };
+
+  const logout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) console.error("Error signing out:", error);
+  };
+
+  // 3. Auth Listener (Supabase)
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (u) => {
-      setUser(u);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
       setLoading(false);
-      if (u) {
-        setDoc(doc(db, 'users', u.uid), {
-          uid: u.uid,
-          email: u.email,
-          displayName: u.displayName,
-          photoURL: u.photoURL,
+      
+      // Optional: Sync user to a custom 'users' table if you still want to do that
+      if (currentUser) {
+        supabase.from('users').upsert({
+          id: currentUser.id,
+          email: currentUser.email,
           updatedAt: new Date().toISOString()
-        }, { merge: true }).catch(err => handleFirestoreError(err, OperationType.WRITE, `users/${u.uid}`));
+        }).then(({ error }) => {
+          if (error) console.error("User sync error:", error);
+        });
       }
     });
-    return () => unsubscribe();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  // Strategies Listener
+  // 4. Strategies Listener (Supabase)
   useEffect(() => {
     if (!user) return;
-    const q = query(
-      collection(db, 'strategies'), 
-      where('userId', '==', user.uid),
-      orderBy('createdAt', 'desc')
-    );
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Strategy));
-      setStrategies(data);
-      if (data.length > 0 && !activeStrategyId) {
-        setActiveStrategyId(data[0].id);
+
+    const fetchStrategies = async () => {
+      const { data, error } = await supabase
+        .from('strategies')
+        .select('*')
+        .eq('userId', user.id)
+        .order('createdAt', { ascending: false });
+
+      if (error) {
+        console.error("Error fetching strategies:", error);
+        return;
       }
-    }, (err) => handleFirestoreError(err, OperationType.LIST, 'strategies'));
-    return () => unsubscribe();
+
+      if (data) {
+        setStrategies(data as Strategy[]);
+        if (data.length > 0 && !activeStrategyId) {
+          setActiveStrategyId(data[0].id);
+        }
+      }
+    };
+
+    fetchStrategies();
+
+    const channel = supabase.channel('strategies_channel')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'strategies', filter: `userId=eq.${user.id}` }, fetchStrategies)
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, [user]);
 
-  // Trades Listener
+  // 5. Trades Listener (Supabase)
   useEffect(() => {
     if (!user || !activeStrategyId) {
       setTrades([]);
       return;
     };
-    const q = query(
-      collection(db, 'trades'), 
-      where('userId', '==', user.uid),
-      where('strategyId', '==', activeStrategyId),
-      orderBy('createdAt', 'desc')
-    );
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      setTrades(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Trade)));
-    }, (err) => handleFirestoreError(err, OperationType.LIST, 'trades'));
-    return () => unsubscribe();
+
+    const fetchTrades = async () => {
+      const { data, error } = await supabase
+        .from('trades')
+        .select('*')
+        .eq('userId', user.id)
+        .eq('strategyId', activeStrategyId)
+        .order('createdAt', { ascending: false });
+
+      if (error) {
+        console.error("Error fetching trades:", error);
+        return;
+      }
+
+      if (data) setTrades(data as Trade[]);
+    };
+
+    fetchTrades();
+
+    const channel = supabase.channel('trades_channel')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'trades', filter: `strategyId=eq.${activeStrategyId}` }, fetchTrades)
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, [user, activeStrategyId]);
 
+  // Stats Calculations (Unchanged)
   const stats: Stats = useMemo(() => {
     const winRateTarget = activeStrategy?.targetWinRate || 70;
     const wins = trades.filter(t => t.result === 'Win');
@@ -154,7 +170,6 @@ export default function App() {
     const avgWin = wins.length ? wins.reduce((acc, curr) => acc + curr.pips, 0) / wins.length : 0;
     const avgLoss = losses.length ? Math.abs(losses.reduce((acc, curr) => acc + curr.pips, 0) / losses.length) : 0;
     
-    // Average SL/TP
     const tradesWithSL = trades.filter(t => t.slPips && t.slPips > 0);
     const tradesWithTP = trades.filter(t => t.tpPips && t.tpPips > 0);
     const avgSL = tradesWithSL.length ? tradesWithSL.reduce((acc, curr) => acc + (curr.slPips || 0), 0) / tradesWithSL.length : 0;
@@ -191,29 +206,32 @@ export default function App() {
     return calculateProbabilities(winRateTarget, stats.currentStreak, stats.streakType);
   }, [activeStrategy, stats]);
 
+  // 6. Supabase CRUD Operations
   const handleAddTrade = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !activeStrategyId) return;
 
-    try {
-      const tradeData = calculateTradeData(
-        newTrade.entry,
-        newTrade.exit,
-        newTrade.setup,
-        newTrade.result,
-        newTrade.pips,
-        user.uid,
-        activeStrategyId,
-        newTrade.slPips || undefined,
-        newTrade.tpPips || undefined,
-        newTrade.notes || undefined,
-        newTrade.screenshotUrl || undefined
-      );
-      await addDoc(collection(db, 'trades'), tradeData);
+    const tradeData = calculateTradeData(
+      newTrade.entry,
+      newTrade.exit,
+      newTrade.setup,
+      newTrade.result,
+      newTrade.pips,
+      user.id, // Changed to user.id
+      activeStrategyId,
+      newTrade.slPips || undefined,
+      newTrade.tpPips || undefined,
+      newTrade.notes || undefined,
+      newTrade.screenshotUrl || undefined
+    );
+    
+    const { error } = await supabase.from('trades').insert([tradeData]);
+    
+    if (error) {
+      console.error("Error adding trade:", error);
+    } else {
       setIsAddingTradeMode(false);
       setNewTrade({ ...newTrade, pips: 0, slPips: 0, tpPips: 0, notes: '', screenshotUrl: '' });
-    } catch (err) {
-      handleFirestoreError(err, OperationType.CREATE, 'trades');
     }
   };
 
@@ -221,47 +239,42 @@ export default function App() {
     e.preventDefault();
     if (!user) return;
 
-    try {
-      const docRef = await addDoc(collection(db, 'strategies'), {
-        userId: user.uid,
-        name: newStrategy.name,
-        targetWinRate: newStrategy.targetWinRate,
-        description: newStrategy.description,
-        createdAt: new Date().toISOString()
-      });
-      setActiveStrategyId(docRef.id);
+    const { data, error } = await supabase.from('strategies').insert([{
+      userId: user.id, // Changed to user.id
+      name: newStrategy.name,
+      targetWinRate: newStrategy.targetWinRate,
+      description: newStrategy.description,
+      isArchived: false,
+      createdAt: new Date().toISOString()
+    }]).select().single();
+
+    if (error) {
+      console.error("Error adding strategy:", error);
+    } else if (data) {
+      setActiveStrategyId(data.id);
       setIsAddingStrategyMode(false);
       setNewStrategy({ name: '', targetWinRate: 70, description: '' });
-    } catch (err) {
-      handleFirestoreError(err, OperationType.CREATE, 'strategies');
     }
   };
 
   const deleteTrade = async (id: string) => {
-    try {
-      await deleteDoc(doc(db, 'trades', id));
-      setTradeToDelete(null);
-    } catch (err) {
-      handleFirestoreError(err, OperationType.DELETE, `trades/${id}`);
-    }
+    const { error } = await supabase.from('trades').delete().eq('id', id);
+    if (error) console.error("Error deleting trade:", error);
+    else setTradeToDelete(null);
   };
 
   const archiveStrategy = async (id: string, isArchived: boolean) => {
-    try {
-      await setDoc(doc(db, 'strategies', id), { isArchived: !isArchived }, { merge: true });
-    } catch (err) {
-      handleFirestoreError(err, OperationType.UPDATE, `strategies/${id}`);
-    }
+    const { error } = await supabase.from('strategies').update({ isArchived: !isArchived }).eq('id', id);
+    if (error) console.error("Error archiving strategy:", error);
   };
 
   const deleteStrategy = async (id: string) => {
-    try {
-      await deleteDoc(doc(db, 'strategies', id));
+    const { error } = await supabase.from('strategies').delete().eq('id', id);
+    if (error) {
+      console.error('Delete failed:', error);
+    } else {
       if (activeStrategyId === id) setActiveStrategyId(null);
       setStrategyToDelete(null);
-    } catch (err) {
-      console.error('Delete failed:', err);
-      handleFirestoreError(err, OperationType.DELETE, `strategies/${id}`);
     }
   };
 
@@ -279,7 +292,6 @@ export default function App() {
         throw new Error('Clipboard API unavailable');
       }
     } catch (err) {
-      // Fallback for non-secure contexts or restricted iframes
       const textArea = document.createElement("textarea");
       textArea.value = shareText;
       textArea.style.position = "fixed";
@@ -339,13 +351,13 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-6">
-            {/* User Profile */}
+            {/* User Profile - Updated for Supabase Metadata */}
             <div className="flex items-center gap-3 pr-6 border-r border-slate-100">
               <div className="text-right hidden sm:block">
-                <p className="text-xs font-bold text-slate-900">{user.displayName}</p>
+                <p className="text-xs font-bold text-slate-900">{user.user_metadata?.full_name || 'Trader'}</p>
                 <p className="text-[10px] text-slate-400 font-medium">{user.email}</p>
               </div>
-              {user.photoURL && <img src={user.photoURL} className="w-9 h-9 rounded-full ring-2 ring-slate-100" />}
+              {user.user_metadata?.avatar_url && <img src={user.user_metadata.avatar_url} alt="Profile" className="w-9 h-9 rounded-full ring-2 ring-slate-100" />}
               <button 
                 id="logout-btn"
                 onClick={logout}
@@ -1105,4 +1117,3 @@ const processDayData = (trades: Trade[]) => {
     .sort((a, b) => b[1] - a[1])
     .map(([name, pips]) => ({ name: name.substring(0, 3).toUpperCase(), pips }));
 }
-
