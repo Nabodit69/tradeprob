@@ -760,7 +760,7 @@ function Modal({ isOpen, onClose, title, children }: { isOpen: boolean, onClose:
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" />
-          <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md relative z-10 font-sans border border-white overflow-y-auto max-h-[90vh]">
+          <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md relative z-10 font-sans border border-white overflow-y-auto max-h-[90vh] scrollbar-hide">
             <div className="p-10">
               <div className="flex justify-between items-center mb-10">
                 <h2 className="text-2xl font-bold text-slate-900 tracking-tight">{title}</h2>
