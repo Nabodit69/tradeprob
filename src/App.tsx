@@ -349,8 +349,8 @@ export default function App() {
 
   return (
     <div className="min-h-screen font-sans bg-slate-50/50">
-      <header className="bg-white border-b border-slate-200 px-4 py-4 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto flex justify-between items-center gap-2">
+      <header className="bg-white border-b border-slate-200 px-8 py-5 sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-4">
             <div className="bg-blue-600 p-2 rounded-xl text-white shadow-md">
               <Zap size={22} />
@@ -378,7 +378,7 @@ export default function App() {
             <button 
               onClick={() => setIsAddingTradeMode(true)}
               disabled={!activeStrategyId}
-              className="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white px-3 py-2 rounded-xl flex items-center gap-2 font-bold transition-all shadow-lg shadow-blue-100 text-sm"
+              className="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 font-bold transition-all shadow-lg shadow-blue-100 text-sm"
             >
               <Plus size={18} />
               New Trade
@@ -387,11 +387,11 @@ export default function App() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-4 grid grid-cols-12 gap-4">
+      <main className="max-w-7xl mx-auto px-8 py-8 grid grid-cols-12 gap-8">
         
         {/* Left Column */}
         <div className="col-span-12 lg:col-span-4 space-y-8">
-          <section className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+          <section className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
             <div className="flex justify-between items-center mb-5">
               <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
                 <Target size={12} /> My Strategies
@@ -407,59 +407,45 @@ export default function App() {
             </div>
 
             {filteredStrategies.length > 0 ? (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {filteredStrategies.map((s) => (
-                  <div key={s.id} className="relative group">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => setActiveStrategyId(s.id)}
-                        className={`flex-1 text-left px-4 py-3 rounded-xl border transition-all flex items-center justify-between ${activeStrategyId === s.id ? 'border-blue-600 bg-blue-50/50 shadow-sm' : 'border-slate-100 hover:border-slate-200 bg-white'}`}
-                      >
-                        <div className="max-w-[80%]">
+                  <div key={s.id} className="relative">
+                    {/* Strategy Card */}
+                    <div
+                      onClick={() => setActiveStrategyId(s.id)}
+                      className={`w-full text-left px-4 py-3 rounded-xl border transition-all cursor-pointer ${activeStrategyId === s.id ? 'border-blue-600 bg-blue-50/50 shadow-sm' : 'border-slate-100 hover:border-slate-200 bg-white'}`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
                           <p className={`text-sm font-bold truncate ${activeStrategyId === s.id ? 'text-blue-700' : 'text-slate-700'}`}>{s.name}</p>
                           <p className="text-[10px] text-slate-400 font-medium tracking-tight">Target: {s.targetWinRate}%</p>
                         </div>
-                        {activeStrategyId === s.id && <ChevronDown size={14} className="text-blue-600 lg:group-hover:hidden" />}
-                      </button>
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); setOpenStrategyMenuId(openStrategyMenuId === s.id ? null : s.id); }}
-                        className="lg:hidden p-3 text-slate-400 hover:bg-slate-100 rounded-xl border border-slate-100 transition-colors"
-                      >
-                        <MoreVertical size={18} />
-                      </button>
+                        {/* Action buttons - always visible */}
+                        <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                          <button onClick={() => shareStrategy(s)} className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition-colors" title="Share">
+                            {copySuccess === s.id ? <Check size={14} className="text-emerald-500" /> : <Share2 size={14} />}
+                          </button>
+                          <button onClick={() => archiveStrategy(s.id, !!s.isArchived)} className="p-1.5 text-slate-400 hover:text-amber-600 rounded-lg hover:bg-amber-50 transition-colors" title={s.isArchived ? 'Restore' : 'Archive'}>
+                            {s.isArchived ? <ArchiveRestore size={14} /> : <Archive size={14} />}
+                          </button>
+                          <button onClick={() => { if (activeStrategyId === s.id && trades.length > 0) exportTradesToCSV(trades, s.name); else alert('Select this strategy first or no trades to export.'); }} className="p-1.5 text-slate-400 hover:text-emerald-600 rounded-lg hover:bg-emerald-50 transition-colors" title="Export CSV">
+                            <Download size={14} />
+                          </button>
+                          <button onClick={() => setStrategyToDelete(s.id)} className="p-1.5 text-slate-400 hover:text-rose-500 rounded-lg hover:bg-rose-50 transition-colors" title="Delete">
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                    
-                    <AnimatePresence>
-                      {(openStrategyMenuId === s.id || activeStrategyId === s.id) && (
-                        <motion.div 
-                          initial={{ opacity: 0, scale: 0.95, y: -10 }}
-                          animate={{ opacity: (openStrategyMenuId === s.id) ? 1 : undefined, scale: (openStrategyMenuId === s.id) ? 1 : undefined, y: (openStrategyMenuId === s.id) ? 0 : undefined }}
-                          exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                          className={`absolute right-0 top-full mt-2 lg:mt-0 lg:top-1/2 lg:-translate-y-1/2 items-center gap-1 bg-white p-2 rounded-2xl border border-slate-200 shadow-2xl z-50 transition-all duration-200 ${openStrategyMenuId === s.id ? 'flex ring-4 ring-blue-500/10' : 'hidden lg:flex lg:opacity-0 lg:group-hover:opacity-100 lg:scale-95 lg:group-hover:scale-100 lg:translate-x-4 lg:group-hover:translate-x-0 pointer-events-none lg:group-hover:pointer-events-auto'}`}
-                        >
-                          <button onClick={(e) => { e.stopPropagation(); shareStrategy(s); }} className="p-3 lg:p-2 text-slate-500 hover:text-blue-600 rounded-xl hover:bg-blue-50 transition-colors" title="Share">
-                            {copySuccess === s.id ? <Check size={16} className="text-emerald-500" /> : <Share2 size={16} />}
-                          </button>
-                          <button onClick={(e) => { e.stopPropagation(); archiveStrategy(s.id, !!s.isArchived); }} className="p-3 lg:p-2 text-slate-500 hover:text-amber-600 rounded-xl hover:bg-amber-50 transition-colors" title={s.isArchived ? 'Restore' : 'Archive'}>
-                            {s.isArchived ? <ArchiveRestore size={16} /> : <Archive size={16} />}
-                          </button>
-                          <button onClick={(e) => { e.stopPropagation(); if (trades.length === 0) alert('No trades to export.'); else exportTradesToCSV(trades, s.name); }} className={`p-3 lg:p-2 rounded-xl transition-colors ${activeStrategyId === s.id ? 'text-emerald-600 hover:bg-emerald-50' : 'text-slate-300 cursor-not-allowed opacity-50'}`} disabled={activeStrategyId !== s.id} title="Export CSV">
-                            <Download size={16} />
-                          </button>
-                          <button onClick={(e) => { e.stopPropagation(); setStrategyToDelete(s.id); }} className="p-3 lg:p-2 text-rose-500 hover:text-rose-700 rounded-xl hover:bg-rose-50 transition-colors" title="Delete">
-                            <Trash2 size={16} />
-                          </button>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
 
+                    {/* Delete confirmation */}
                     <AnimatePresence>
                       {strategyToDelete === s.id && (
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[60] bg-white/95 backdrop-blur-sm rounded-xl flex flex-col items-center justify-center p-2 text-center">
                           <p className="text-[10px] font-black text-rose-600 uppercase mb-2">Delete Strategy?</p>
                           <div className="flex gap-2">
-                            <button onClick={(e) => { e.stopPropagation(); deleteStrategy(s.id); }} className="px-3 py-1 bg-rose-600 text-white text-[10px] font-bold rounded-lg shadow-sm">Yes</button>
-                            <button onClick={(e) => { e.stopPropagation(); setStrategyToDelete(null); }} className="px-3 py-1 bg-slate-100 text-slate-600 text-[10px] font-bold rounded-lg">No</button>
+                            <button onClick={() => deleteStrategy(s.id)} className="px-3 py-1 bg-rose-600 text-white text-[10px] font-bold rounded-lg shadow-sm">Yes</button>
+                            <button onClick={() => setStrategyToDelete(null)} className="px-3 py-1 bg-slate-100 text-slate-600 text-[10px] font-bold rounded-lg">No</button>
                           </div>
                         </motion.div>
                       )}
@@ -479,7 +465,7 @@ export default function App() {
 
           {/* Probability Engine */}
           {activeStrategy ? (
-            <section className="bg-slate-900 text-white p-5 rounded-3xl shadow-2xl overflow-hidden relative">
+            <section className="bg-slate-900 text-white p-7 rounded-3xl shadow-2xl overflow-hidden relative">
               <div className="absolute top-0 right-0 p-4 opacity-10"><Activity size={140} /></div>
               <h2 className="text-xs font-bold text-blue-400 uppercase tracking-widest mb-8 relative z-10 flex items-center gap-2">
                 <Zap size={14} /> Prob Range: {activeStrategy.name}
@@ -529,11 +515,11 @@ export default function App() {
           )}
 
           <div className="grid grid-cols-2 gap-4">
-            <div className="bg-white p-4 rounded-2xl border border-slate-200">
+            <div className="bg-white p-5 rounded-2xl border border-slate-200">
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Avg Win</p>
               <p className="text-xl font-bold text-emerald-600 font-mono">+{stats.avgWinPips.toFixed(1)}</p>
             </div>
-            <div className="bg-white p-4 rounded-2xl border border-slate-200">
+            <div className="bg-white p-5 rounded-2xl border border-slate-200">
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Avg Loss</p>
               <p className="text-xl font-bold text-rose-600 font-mono">-{stats.avgLossPips.toFixed(1)}</p>
             </div>
@@ -542,7 +528,7 @@ export default function App() {
 
         {/* Right Column */}
         <div className="col-span-12 lg:col-span-8 space-y-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <MetricBox icon={<History className="text-blue-500" size={20} />} label="Real Win Rate" value={`${stats.actualWinRate.toFixed(1)}%`} subValue={`${stats.varianceFromTarget >= 0 ? '+' : ''}${stats.varianceFromTarget.toFixed(1)}% delta`} status={stats.varianceFromTarget >= 0 ? 'good' : 'warning'} />
             <MetricBox icon={<TrendingUp className="text-emerald-500" size={20} />} label="Avg TP Pips" value={stats.avgTPPips.toFixed(1)} subValue="Target profit efficiency" status={stats.avgTPPips >= stats.avgSLPips ? 'good' : 'warning'} />
             <MetricBox icon={<AlertTriangle className="text-rose-500" size={20} />} label="Avg SL Pips" value={stats.avgSLPips.toFixed(1)} subValue="Risk exposure" status="neutral" />
@@ -557,8 +543,8 @@ export default function App() {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-sm">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="bg-white p-7 rounded-3xl border border-slate-200 shadow-sm">
                   <h3 className="text-xs font-bold text-slate-900 mb-8 flex items-center gap-2 uppercase tracking-widest">
                     <Clock size={16} className="text-blue-500" /> Session Expectancy
                   </h3>
@@ -574,7 +560,7 @@ export default function App() {
                     </ResponsiveContainer>
                   </div>
                 </div>
-                <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-sm">
+                <div className="bg-white p-7 rounded-3xl border border-slate-200 shadow-sm">
                   <h3 className="text-xs font-bold text-slate-900 mb-8 flex items-center gap-2 uppercase tracking-widest">
                     <Calendar size={16} className="text-blue-500" /> Day Distribution
                   </h3>
@@ -593,7 +579,7 @@ export default function App() {
               </div>
 
               <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-                <div className="px-4 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/30">
+                <div className="px-8 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/30">
                   <div className="flex items-center gap-2">
                     <History size={16} className="text-slate-400" />
                     <h3 className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Trade Log</h3>
@@ -604,26 +590,26 @@ export default function App() {
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="bg-slate-50/30 text-slate-400 text-[10px] font-black uppercase tracking-widest border-b border-slate-100">
-                        <th className="px-3 py-3">Timeline</th>
-                        <th className="px-3 py-3">Window</th>
-                        <th className="px-3 py-3">Mechanism</th>
-                        <th className="px-3 py-3 text-center">Outcome</th>
-                        <th className="px-3 py-3 text-right">Magnitude</th>
-                        <th className="px-3 py-3 text-right">Runtime</th>
-                        <th className="px-3 py-3 text-right">Ops</th>
+                        <th className="px-8 py-4">Timeline</th>
+                        <th className="px-8 py-4">Window</th>
+                        <th className="px-8 py-4">Mechanism</th>
+                        <th className="px-8 py-4 text-center">Outcome</th>
+                        <th className="px-8 py-4 text-right">Magnitude</th>
+                        <th className="px-8 py-4 text-right">Runtime</th>
+                        <th className="px-8 py-4 text-right">Ops</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {trades.map((trade) => (
                         <tr key={trade.id} className="group hover:bg-slate-50/50 transition-colors">
-                          <td className="px-3 py-3 whitespace-nowrap">
+                          <td className="px-8 py-5 whitespace-nowrap">
                             <div className="text-xs font-bold text-slate-900">{format(new Date(trade.entryTime), 'MMM dd')}</div>
                             <div className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">{format(new Date(trade.entryTime), 'HH:mm')}</div>
                           </td>
-                          <td className="px-3 py-3">
+                          <td className="px-8 py-5">
                             <span className={`text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-widest ${sessionColors(trade.session)}`}>{trade.session}</span>
                           </td>
-                          <td className="px-3 py-3">
+                          <td className="px-8 py-5">
                             <div className="text-[10px] font-bold text-slate-600 border-l-2 border-slate-200 pl-2 uppercase">{trade.setup}</div>
                             {trade.notes && (
                               <div className="flex items-center gap-1 mt-1 text-[9px] text-slate-400 font-medium">
@@ -632,7 +618,7 @@ export default function App() {
                               </div>
                             )}
                           </td>
-                          <td className="px-3 py-3 text-center">
+                          <td className="px-8 py-5 text-center">
                             <div className="flex flex-col items-center gap-1">
                               <span className={`inline-flex items-center justify-center w-7 h-7 rounded-lg text-xs font-black ${trade.result === 'Win' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>{trade.result[0]}</span>
                               {trade.screenshotUrl && (
@@ -642,12 +628,12 @@ export default function App() {
                               )}
                             </div>
                           </td>
-                          <td className="px-3 py-3 text-right">
+                          <td className="px-8 py-5 text-right">
                             <div className={`font-mono font-bold text-xs ${trade.pips >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{trade.pips > 0 ? '+' : ''}{trade.pips.toFixed(1)}</div>
                             <div className="text-[9px] text-slate-400 font-mono mt-1">{trade.slPips && `${trade.slPips} SL`} {trade.tpPips && `| ${trade.tpPips} TP`}</div>
                           </td>
-                          <td className="px-3 py-3 text-right text-[10px] text-slate-500 font-mono font-bold">{trade.durationMinutes}M</td>
-                          <td className="px-3 py-3 text-right relative">
+                          <td className="px-8 py-5 text-right text-[10px] text-slate-500 font-mono font-bold">{trade.durationMinutes}M</td>
+                          <td className="px-8 py-5 text-right relative">
                             {tradeToDelete === trade.id ? (
                               <div className="flex items-center justify-end gap-1 scale-90 origin-right">
                                 <button onClick={() => deleteTrade(trade.id)} className="bg-rose-500 text-white px-2 py-1 rounded text-[10px] font-bold">Yes</button>
@@ -775,7 +761,7 @@ function Modal({ isOpen, onClose, title, children }: { isOpen: boolean, onClose:
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" />
           <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md relative z-10 overflow-hidden font-sans border border-white">
-            <div className="p-6">
+            <div className="p-10">
               <div className="flex justify-between items-center mb-10">
                 <h2 className="text-2xl font-bold text-slate-900 tracking-tight">{title}</h2>
                 <button onClick={onClose} className="text-slate-300 hover:text-slate-500 transition-colors">✕</button>
@@ -792,13 +778,13 @@ function Modal({ isOpen, onClose, title, children }: { isOpen: boolean, onClose:
 function MetricBox({ icon, label, value, subValue, status }: { icon: React.ReactNode, label: string, value: string, subValue: string, status: 'good' | 'warning' | 'neutral' }) {
   const statusColors = { good: 'text-emerald-600', warning: 'text-amber-500', neutral: 'text-slate-400' };
   return (
-    <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm font-sans flex flex-col justify-between h-full group hover:border-blue-100 transition-all">
+    <div className="bg-white p-7 rounded-3xl border border-slate-200 shadow-sm font-sans flex flex-col justify-between h-full group hover:border-blue-100 transition-all">
       <div className="flex items-center gap-4 mb-4">
         <div className="bg-slate-50 p-2.5 rounded-xl group-hover:scale-110 transition-transform">{icon}</div>
         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{label}</span>
       </div>
       <div className="flex flex-col">
-        <span className="text-2xl font-black text-slate-900 tracking-tighter font-mono">{value}</span>
+        <span className="text-3xl font-black text-slate-900 tracking-tighter font-mono">{value}</span>
         <span className={`text-[10px] font-black uppercase mt-1.5 tracking-wider ${statusColors[status]}`}>{subValue}</span>
       </div>
     </div>
