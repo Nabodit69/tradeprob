@@ -398,17 +398,12 @@ export default function App() {
                             <p className="text-[9px] text-slate-400 font-mono">{trade.slPips ? `SL ${trade.slPips}` : ''} {trade.tpPips ? `TP ${trade.tpPips}` : ''}</p>
                           </div>
                         </div>
-                        {trade.notes && <p className="text-[10px] text-slate-400 flex items-center gap-1"><FileText size={10} />{trade.notes}</p>}
-                        <div className="flex justify-end mt-2">
-                          {tradeToDelete === trade.id ? (
-                            <div className="flex gap-1">
-                              <button onClick={() => deleteTrade(trade.id)} className="bg-rose-500 text-white px-2 py-1 rounded text-[10px] font-bold">Yes</button>
-                              <button onClick={() => setTradeToDelete(null)} className="bg-slate-200 text-slate-600 px-2 py-1 rounded text-[10px] font-bold">No</button>
-                            </div>
-                          ) : (
-                            <button onClick={() => setTradeToDelete(trade.id)} className="text-slate-300 hover:text-rose-500 transition-colors p-1.5 rounded-lg hover:bg-rose-50"><Trash2 size={14} /></button>
-                          )}
-                        </div>
+                        {trade.notes && <p className="text-[10px] text-slate-400 flex items-center gap-1 mt-1"><FileText size={10} />{trade.notes}</p>}
+                        {trade.screenshotUrl && (
+                          <a href={trade.screenshotUrl} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-bold hover:bg-blue-100 transition-colors">
+                            <ImageIcon size={11} /> View Screenshot
+                          </a>
+                        )}
                       </div>
                     ))}
                     {trades.length === 0 && <div className="py-12 text-center"><p className="text-xs text-slate-300 font-bold uppercase tracking-widest">No trades yet</p></div>}
@@ -425,7 +420,7 @@ export default function App() {
                           <th className="px-4 py-3 text-center">Result</th>
                           <th className="px-4 py-3 text-right">Pips</th>
                           <th className="px-4 py-3 text-right">Duration</th>
-                          <th className="px-4 py-3 text-right"></th>
+                          <th className="px-4 py-3 text-center">Screenshot</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
@@ -448,14 +443,13 @@ export default function App() {
                               <div className="text-[9px] text-slate-400 font-mono">{trade.slPips ? `${trade.slPips} SL` : ''}{trade.tpPips ? ` | ${trade.tpPips} TP` : ''}</div>
                             </td>
                             <td className="px-4 py-3 text-right text-[10px] text-slate-500 font-mono font-bold">{trade.durationMinutes}m</td>
-                            <td className="px-4 py-3 text-right">
-                              {tradeToDelete === trade.id ? (
-                                <div className="flex items-center justify-end gap-1">
-                                  <button onClick={() => deleteTrade(trade.id)} className="bg-rose-500 text-white px-2 py-1 rounded text-[10px] font-bold">Yes</button>
-                                  <button onClick={() => setTradeToDelete(null)} className="bg-slate-200 text-slate-600 px-2 py-1 rounded text-[10px] font-bold">No</button>
-                                </div>
+                            <td className="px-4 py-3 text-center">
+                              {trade.screenshotUrl ? (
+                                <a href={trade.screenshotUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-[9px] font-bold hover:bg-blue-100 transition-colors whitespace-nowrap">
+                                  <ImageIcon size={10} /> View SS
+                                </a>
                               ) : (
-                                <button onClick={() => setTradeToDelete(trade.id)} className="text-slate-300 hover:text-rose-500 transition-colors p-1.5 rounded-lg hover:bg-rose-50 opacity-0 group-hover:opacity-100"><Trash2 size={14} /></button>
+                                <span className="text-[9px] text-slate-300 font-bold">—</span>
                               )}
                             </td>
                           </tr>
