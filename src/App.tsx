@@ -349,8 +349,8 @@ export default function App() {
 
   return (
     <div className="min-h-screen font-sans bg-slate-50/50">
-      <header className="bg-white border-b border-slate-200 px-8 py-5 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
+      <header className="bg-white border-b border-slate-200 px-4 py-4 sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto flex justify-between items-center gap-2">
           <div className="flex items-center gap-4">
             <div className="bg-blue-600 p-2 rounded-xl text-white shadow-md">
               <Zap size={22} />
@@ -378,7 +378,7 @@ export default function App() {
             <button 
               onClick={() => setIsAddingTradeMode(true)}
               disabled={!activeStrategyId}
-              className="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 font-bold transition-all shadow-lg shadow-blue-100 text-sm"
+              className="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white px-3 py-2 rounded-xl flex items-center gap-2 font-bold transition-all shadow-lg shadow-blue-100 text-sm"
             >
               <Plus size={18} />
               New Trade
@@ -387,11 +387,11 @@ export default function App() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-8 py-8 grid grid-cols-12 gap-8">
+      <main className="max-w-7xl mx-auto px-4 py-4 grid grid-cols-12 gap-4">
         
         {/* Left Column */}
         <div className="col-span-12 lg:col-span-4 space-y-8">
-          <section className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+          <section className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
             <div className="flex justify-between items-center mb-5">
               <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
                 <Target size={12} /> My Strategies
@@ -479,7 +479,7 @@ export default function App() {
 
           {/* Probability Engine */}
           {activeStrategy ? (
-            <section className="bg-slate-900 text-white p-7 rounded-3xl shadow-2xl overflow-hidden relative">
+            <section className="bg-slate-900 text-white p-5 rounded-3xl shadow-2xl overflow-hidden relative">
               <div className="absolute top-0 right-0 p-4 opacity-10"><Activity size={140} /></div>
               <h2 className="text-xs font-bold text-blue-400 uppercase tracking-widest mb-8 relative z-10 flex items-center gap-2">
                 <Zap size={14} /> Prob Range: {activeStrategy.name}
@@ -529,11 +529,11 @@ export default function App() {
           )}
 
           <div className="grid grid-cols-2 gap-4">
-            <div className="bg-white p-5 rounded-2xl border border-slate-200">
+            <div className="bg-white p-4 rounded-2xl border border-slate-200">
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Avg Win</p>
               <p className="text-xl font-bold text-emerald-600 font-mono">+{stats.avgWinPips.toFixed(1)}</p>
             </div>
-            <div className="bg-white p-5 rounded-2xl border border-slate-200">
+            <div className="bg-white p-4 rounded-2xl border border-slate-200">
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Avg Loss</p>
               <p className="text-xl font-bold text-rose-600 font-mono">-{stats.avgLossPips.toFixed(1)}</p>
             </div>
@@ -542,7 +542,7 @@ export default function App() {
 
         {/* Right Column */}
         <div className="col-span-12 lg:col-span-8 space-y-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <MetricBox icon={<History className="text-blue-500" size={20} />} label="Real Win Rate" value={`${stats.actualWinRate.toFixed(1)}%`} subValue={`${stats.varianceFromTarget >= 0 ? '+' : ''}${stats.varianceFromTarget.toFixed(1)}% delta`} status={stats.varianceFromTarget >= 0 ? 'good' : 'warning'} />
             <MetricBox icon={<TrendingUp className="text-emerald-500" size={20} />} label="Avg TP Pips" value={stats.avgTPPips.toFixed(1)} subValue="Target profit efficiency" status={stats.avgTPPips >= stats.avgSLPips ? 'good' : 'warning'} />
             <MetricBox icon={<AlertTriangle className="text-rose-500" size={20} />} label="Avg SL Pips" value={stats.avgSLPips.toFixed(1)} subValue="Risk exposure" status="neutral" />
@@ -557,8 +557,8 @@ export default function App() {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="bg-white p-7 rounded-3xl border border-slate-200 shadow-sm">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-sm">
                   <h3 className="text-xs font-bold text-slate-900 mb-8 flex items-center gap-2 uppercase tracking-widest">
                     <Clock size={16} className="text-blue-500" /> Session Expectancy
                   </h3>
@@ -574,7 +574,7 @@ export default function App() {
                     </ResponsiveContainer>
                   </div>
                 </div>
-                <div className="bg-white p-7 rounded-3xl border border-slate-200 shadow-sm">
+                <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-sm">
                   <h3 className="text-xs font-bold text-slate-900 mb-8 flex items-center gap-2 uppercase tracking-widest">
                     <Calendar size={16} className="text-blue-500" /> Day Distribution
                   </h3>
@@ -593,7 +593,7 @@ export default function App() {
               </div>
 
               <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-                <div className="px-8 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/30">
+                <div className="px-4 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/30">
                   <div className="flex items-center gap-2">
                     <History size={16} className="text-slate-400" />
                     <h3 className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Trade Log</h3>
@@ -604,26 +604,26 @@ export default function App() {
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="bg-slate-50/30 text-slate-400 text-[10px] font-black uppercase tracking-widest border-b border-slate-100">
-                        <th className="px-8 py-4">Timeline</th>
-                        <th className="px-8 py-4">Window</th>
-                        <th className="px-8 py-4">Mechanism</th>
-                        <th className="px-8 py-4 text-center">Outcome</th>
-                        <th className="px-8 py-4 text-right">Magnitude</th>
-                        <th className="px-8 py-4 text-right">Runtime</th>
-                        <th className="px-8 py-4 text-right">Ops</th>
+                        <th className="px-3 py-3">Timeline</th>
+                        <th className="px-3 py-3">Window</th>
+                        <th className="px-3 py-3">Mechanism</th>
+                        <th className="px-3 py-3 text-center">Outcome</th>
+                        <th className="px-3 py-3 text-right">Magnitude</th>
+                        <th className="px-3 py-3 text-right">Runtime</th>
+                        <th className="px-3 py-3 text-right">Ops</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {trades.map((trade) => (
                         <tr key={trade.id} className="group hover:bg-slate-50/50 transition-colors">
-                          <td className="px-8 py-5 whitespace-nowrap">
+                          <td className="px-3 py-3 whitespace-nowrap">
                             <div className="text-xs font-bold text-slate-900">{format(new Date(trade.entryTime), 'MMM dd')}</div>
                             <div className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">{format(new Date(trade.entryTime), 'HH:mm')}</div>
                           </td>
-                          <td className="px-8 py-5">
+                          <td className="px-3 py-3">
                             <span className={`text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-widest ${sessionColors(trade.session)}`}>{trade.session}</span>
                           </td>
-                          <td className="px-8 py-5">
+                          <td className="px-3 py-3">
                             <div className="text-[10px] font-bold text-slate-600 border-l-2 border-slate-200 pl-2 uppercase">{trade.setup}</div>
                             {trade.notes && (
                               <div className="flex items-center gap-1 mt-1 text-[9px] text-slate-400 font-medium">
@@ -632,7 +632,7 @@ export default function App() {
                               </div>
                             )}
                           </td>
-                          <td className="px-8 py-5 text-center">
+                          <td className="px-3 py-3 text-center">
                             <div className="flex flex-col items-center gap-1">
                               <span className={`inline-flex items-center justify-center w-7 h-7 rounded-lg text-xs font-black ${trade.result === 'Win' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>{trade.result[0]}</span>
                               {trade.screenshotUrl && (
@@ -642,12 +642,12 @@ export default function App() {
                               )}
                             </div>
                           </td>
-                          <td className="px-8 py-5 text-right">
+                          <td className="px-3 py-3 text-right">
                             <div className={`font-mono font-bold text-xs ${trade.pips >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{trade.pips > 0 ? '+' : ''}{trade.pips.toFixed(1)}</div>
                             <div className="text-[9px] text-slate-400 font-mono mt-1">{trade.slPips && `${trade.slPips} SL`} {trade.tpPips && `| ${trade.tpPips} TP`}</div>
                           </td>
-                          <td className="px-8 py-5 text-right text-[10px] text-slate-500 font-mono font-bold">{trade.durationMinutes}M</td>
-                          <td className="px-8 py-5 text-right relative">
+                          <td className="px-3 py-3 text-right text-[10px] text-slate-500 font-mono font-bold">{trade.durationMinutes}M</td>
+                          <td className="px-3 py-3 text-right relative">
                             {tradeToDelete === trade.id ? (
                               <div className="flex items-center justify-end gap-1 scale-90 origin-right">
                                 <button onClick={() => deleteTrade(trade.id)} className="bg-rose-500 text-white px-2 py-1 rounded text-[10px] font-bold">Yes</button>
@@ -775,7 +775,7 @@ function Modal({ isOpen, onClose, title, children }: { isOpen: boolean, onClose:
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" />
           <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md relative z-10 overflow-hidden font-sans border border-white">
-            <div className="p-10">
+            <div className="p-6">
               <div className="flex justify-between items-center mb-10">
                 <h2 className="text-2xl font-bold text-slate-900 tracking-tight">{title}</h2>
                 <button onClick={onClose} className="text-slate-300 hover:text-slate-500 transition-colors">✕</button>
@@ -792,13 +792,13 @@ function Modal({ isOpen, onClose, title, children }: { isOpen: boolean, onClose:
 function MetricBox({ icon, label, value, subValue, status }: { icon: React.ReactNode, label: string, value: string, subValue: string, status: 'good' | 'warning' | 'neutral' }) {
   const statusColors = { good: 'text-emerald-600', warning: 'text-amber-500', neutral: 'text-slate-400' };
   return (
-    <div className="bg-white p-7 rounded-3xl border border-slate-200 shadow-sm font-sans flex flex-col justify-between h-full group hover:border-blue-100 transition-all">
+    <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm font-sans flex flex-col justify-between h-full group hover:border-blue-100 transition-all">
       <div className="flex items-center gap-4 mb-4">
         <div className="bg-slate-50 p-2.5 rounded-xl group-hover:scale-110 transition-transform">{icon}</div>
         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{label}</span>
       </div>
       <div className="flex flex-col">
-        <span className="text-3xl font-black text-slate-900 tracking-tighter font-mono">{value}</span>
+        <span className="text-2xl font-black text-slate-900 tracking-tighter font-mono">{value}</span>
         <span className={`text-[10px] font-black uppercase mt-1.5 tracking-wider ${statusColors[status]}`}>{subValue}</span>
       </div>
     </div>
