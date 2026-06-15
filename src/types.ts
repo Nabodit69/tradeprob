@@ -1,7 +1,6 @@
-export type Session = 'London' | 'New York' | 'Asia' | 'Opening' | 'Mid Market' | 'Last Hour';
+export type Session = 'London' | 'New York' | 'Asia';
 export type Result = 'Win' | 'Loss';
 export type SetupType = 'Breakout' | 'Retest' | 'Trend' | 'Counter-Trend' | 'News';
-export type MarketScope = 'indian' | 'global';
 
 export interface Strategy {
   id: string;
@@ -11,7 +10,6 @@ export interface Strategy {
   description?: string;
   isArchived?: boolean;
   createdAt: string;
-  marketScope?: MarketScope;
 }
 
 export interface Trade {
