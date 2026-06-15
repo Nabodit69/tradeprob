@@ -38,7 +38,8 @@ export default function App() {
     pips: 0, slPips: 0, tpPips: 0, notes: '', screenshotUrl: ''
   });
 
-  const [newStrategy, setNewStrategy] = useState({ name: '', targetWinRate: 70, description: '' });
+  const [newStrategy, setNewStrategy] = useState({ name: '', targetWinRate: 70, description: '', marketScope: 'global' as 'indian' | 'global' });
+  const [marketFilter, setMarketFilter] = useState<'indian' | 'global'>('global');
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -57,7 +58,7 @@ export default function App() {
     const fetchStrategies = async () => {
       const { data } = await supabase.from('strategies').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
       if (data) {
-        const mapped: Strategy[] = data.map(s => ({ id: s.id, userId: s.user_id, name: s.name, targetWinRate: s.target_win_rate, description: s.description, isArchived: s.is_archived, createdAt: s.created_at }));
+        const mapped: Strategy[] = data.map(s => ({ id: s.id, userId: s.user_id, name: s.name, targetWinRate: s.target_win_rate, description: s.description, isArchived: s.is_archived, createdAt: s.created_at, marketScope: (s.market_scope || 'global') as 'indian' | 'global' }));
         setStrategies(mapped);
         if (mapped.length > 0 && !activeStrategyId) setActiveStrategyId(mapped[0].id);
       }
@@ -99,11 +100,14 @@ export default function App() {
   }, [trades, activeStrategy]);
 
   const probStats = useMemo(() => calculateProbabilities(activeStrategy?.targetWinRate || 70, stats.currentStreak, stats.streakType), [activeStrategy, stats]);
+  const isIndian = activeStrategy?.marketScope === 'indian';
+  const unit = isIndian ? 'Rs.' : 'pips';
+  const unitShort = isIndian ? '₹' : 'p';
 
   const handleAddTrade = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !activeStrategyId) return;
-    const tradeData = calculateTradeData(newTrade.entry, newTrade.exit, newTrade.setup, newTrade.result, newTrade.pips, user.id, activeStrategyId, newTrade.slPips || undefined, newTrade.tpPips || undefined, newTrade.notes || undefined, newTrade.screenshotUrl || undefined);
+    const tradeData = calculateTradeData(newTrade.entry, newTrade.exit, newTrade.setup, newTrade.result, newTrade.pips, user.id, activeStrategyId, newTrade.slPips || undefined, newTrade.tpPips || undefined, newTrade.notes || undefined, newTrade.screenshotUrl || undefined, isIndian);
     await supabase.from('trades').insert({ id: tradeData.id, user_id: tradeData.userId, strategy_id: tradeData.strategyId, entry_time: tradeData.entryTime, exit_time: tradeData.exitTime, day_of_week: tradeData.dayOfWeek, session: tradeData.session, setup: tradeData.setup, result: tradeData.result, pips: tradeData.pips, sl_pips: tradeData.slPips ?? null, tp_pips: tradeData.tpPips ?? null, notes: tradeData.notes ?? null, screenshot_url: tradeData.screenshotUrl ?? null, duration_minutes: tradeData.durationMinutes, created_at: tradeData.createdAt });
     setIsAddingTradeMode(false);
     setNewTrade({ ...newTrade, pips: 0, slPips: 0, tpPips: 0, notes: '', screenshotUrl: '' });
@@ -112,7 +116,7 @@ export default function App() {
   const handleAddStrategy = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
-    const { data } = await supabase.from('strategies').insert({ user_id: user.id, name: newStrategy.name, target_win_rate: newStrategy.targetWinRate, description: newStrategy.description, is_archived: false, created_at: new Date().toISOString() }).select().single();
+    const { data } = await supabase.from('strategies').insert({ user_id: user.id, name: newStrategy.name, target_win_rate: newStrategy.targetWinRate, description: newStrategy.description, is_archived: false, market_scope: newStrategy.marketScope, created_at: new Date().toISOString() }).select().single();
     if (data) setActiveStrategyId(data.id);
     setIsAddingStrategyMode(false);
     setNewStrategy({ name: '', targetWinRate: 70, description: '' });
@@ -128,7 +132,7 @@ export default function App() {
     try { navigator.clipboard.writeText(text).then(() => { setCopySuccess(s.id); setTimeout(() => setCopySuccess(null), 2000); }); } catch { const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); setCopySuccess(s.id); setTimeout(() => setCopySuccess(null), 2000); }
   };
 
-  const filteredStrategies = useMemo(() => strategies.filter(s => strategyTab === 'archived' ? s.isArchived : !s.isArchived), [strategies, strategyTab]);
+  const filteredStrategies = useMemo(() => strategies.filter(s => (strategyTab === 'archived' ? s.isArchived : !s.isArchived) && (s.marketScope || 'global') === marketFilter), [strategies, strategyTab, marketFilter]);
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -175,7 +179,7 @@ export default function App() {
                 <div className="flex items-center justify-between">
                   <div className="min-w-0 flex-1">
                     <p className={`text-sm font-bold truncate ${activeStrategyId === s.id ? 'text-blue-700' : 'text-slate-700'}`}>{s.name}</p>
-                    <p className="text-[10px] text-slate-400 font-medium">Target: {s.targetWinRate}%</p>
+                    <p className="text-[10px] text-slate-400 font-medium">Target: {s.targetWinRate}% · {s.marketScope === 'indian' ? '🇮🇳' : '🌐'}</p>
                   </div>
                   <div className="flex items-center gap-0.5 ml-2 shrink-0" onClick={e => e.stopPropagation()}>
                     <button onClick={() => shareStrategy(s)} className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition-colors" title="Share">{copySuccess === s.id ? <Check size={12} className="text-emerald-500" /> : <Share2 size={12} />}</button>
@@ -248,11 +252,11 @@ export default function App() {
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-white p-4 rounded-2xl border border-slate-200">
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Avg Win</p>
-          <p className="text-lg font-bold text-emerald-600 font-mono">+{stats.avgWinPips.toFixed(1)}</p>
+          <p className="text-lg font-bold text-emerald-600 font-mono">{isIndian ? "₹" : "+"}{stats.avgWinPips.toFixed(1)}</p>
         </div>
         <div className="bg-white p-4 rounded-2xl border border-slate-200">
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Avg Loss</p>
-          <p className="text-lg font-bold text-rose-600 font-mono">-{stats.avgLossPips.toFixed(1)}</p>
+          <p className="text-lg font-bold text-rose-600 font-mono">-{isIndian ? "₹" : ""}{stats.avgLossPips.toFixed(1)}</p>
         </div>
       </div>
     </div>
@@ -286,6 +290,10 @@ export default function App() {
               {photoURL && <img src={photoURL} className="w-8 h-8 rounded-full ring-2 ring-slate-100 shrink-0" />}
               <button onClick={logout} className="text-slate-400 hover:text-rose-500 transition-colors p-1.5" title="Logout"><LogOut size={16} /></button>
             </div>
+            <div className="hidden sm:flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 gap-1">
+                <button onClick={() => setMarketFilter('indian')} className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${marketFilter === 'indian' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>🇮🇳 Indian</button>
+                <button onClick={() => setMarketFilter('global')} className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${marketFilter === 'global' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>🌐 Global</button>
+              </div>
             <button onClick={() => setIsAddingTradeMode(true)} disabled={!activeStrategyId} className="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white px-3 py-2 rounded-xl flex items-center gap-1.5 font-bold transition-all shadow-lg shadow-blue-100 text-xs whitespace-nowrap">
               <Plus size={16} /><span className="hidden sm:inline">New Trade</span><span className="sm:hidden">Trade</span>
             </button>
@@ -305,6 +313,10 @@ export default function App() {
                   <span className="font-bold text-slate-900">Strategies</span>
                 </div>
                 <button onClick={() => setShowSidebar(false)} className="p-2 text-slate-400 hover:bg-slate-200 rounded-xl"><X size={18} /></button>
+              </div>
+              <div className="flex gap-1 p-1 bg-slate-100 rounded-xl border border-slate-200 mb-4">
+                <button onClick={() => setMarketFilter('indian')} className={`flex-1 py-2 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${marketFilter === 'indian' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-400'}`}>🇮🇳 Indian</button>
+                <button onClick={() => setMarketFilter('global')} className={`flex-1 py-2 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${marketFilter === 'global' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400'}`}>🌐 Global</button>
               </div>
               <StrategySidebar />
             </motion.div>
@@ -327,8 +339,8 @@ export default function App() {
             {/* Metric Cards */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <MetricCard label="Win Rate" value={`${stats.actualWinRate.toFixed(1)}%`} sub={`${stats.varianceFromTarget >= 0 ? '+' : ''}${stats.varianceFromTarget.toFixed(1)}% delta`} color={stats.varianceFromTarget >= 0 ? 'emerald' : 'amber'} icon={<History size={16} className="text-blue-500" />} />
-              <MetricCard label="Avg TP" value={stats.avgTPPips.toFixed(1)} sub="pips" color={stats.avgTPPips >= stats.avgSLPips ? 'emerald' : 'amber'} icon={<TrendingUp size={16} className="text-emerald-500" />} />
-              <MetricCard label="Avg SL" value={stats.avgSLPips.toFixed(1)} sub="pips" color="slate" icon={<AlertTriangle size={16} className="text-rose-500" />} />
+              <MetricCard label={`Avg TP ${isIndian ? '(Rs.)' : '(pips)'}`} value={`${isIndian ? '₹' : ''}${stats.avgTPPips.toFixed(1)}`} sub={isIndian ? 'target profit' : 'pips'} color={stats.avgTPPips >= stats.avgSLPips ? 'emerald' : 'amber'} icon={<TrendingUp size={16} className="text-emerald-500" />} />
+              <MetricCard label={`Avg SL ${isIndian ? '(Rs.)' : '(pips)'}`} value={`${isIndian ? '₹' : ''}${stats.avgSLPips.toFixed(1)}`} sub={isIndian ? 'risk exposure' : 'pips'} color="slate" icon={<AlertTriangle size={16} className="text-rose-500" />} />
               <MetricCard label="R/R Ratio" value={stats.riskReward.toFixed(2)} sub="realized" color={stats.riskReward >= 1.5 ? 'emerald' : 'slate'} icon={<Activity size={16} className="text-slate-500" />} />
             </div>
 
@@ -344,10 +356,10 @@ export default function App() {
                 {/* Charts */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-                    <h3 className="text-[10px] font-bold text-slate-900 mb-4 flex items-center gap-2 uppercase tracking-widest"><Clock size={14} className="text-blue-500" /> Session Expectancy</h3>
+                    <h3 className="text-[10px] font-bold text-slate-900 mb-4 flex items-center gap-2 uppercase tracking-widest"><Clock size={14} className="text-blue-500" /> {isIndian ? "Market Hours Win Rate" : "Session Expectancy"}</h3>
                     <div className="h-48">
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={processSessionData(trades)}>
+                        <BarChart data={processSessionData(trades, isIndian)}>
                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                           <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 9, fontWeight: 700 }} />
                           <YAxis hide />
@@ -358,7 +370,7 @@ export default function App() {
                     </div>
                   </div>
                   <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-                    <h3 className="text-[10px] font-bold text-slate-900 mb-4 flex items-center gap-2 uppercase tracking-widest"><Calendar size={14} className="text-blue-500" /> Day Distribution</h3>
+                    <h3 className="text-[10px] font-bold text-slate-900 mb-4 flex items-center gap-2 uppercase tracking-widest"><Calendar size={14} className="text-blue-500" /> Day Distribution {isIndian ? "(Rs.)" : "(pips)"}</h3>
                     <div className="h-48">
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart layout="vertical" data={processDayData(trades)}>
@@ -394,8 +406,8 @@ export default function App() {
                             <p className="text-[10px] text-slate-400">{format(new Date(trade.entryTime), 'MMM dd, HH:mm')} · {trade.durationMinutes}m</p>
                           </div>
                           <div className="text-right">
-                            <p className={`font-mono font-bold text-sm ${trade.pips >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{trade.pips > 0 ? '+' : ''}{trade.pips.toFixed(1)}</p>
-                            <p className="text-[9px] text-slate-400 font-mono">{trade.slPips ? `SL ${trade.slPips}` : ''} {trade.tpPips ? `TP ${trade.tpPips}` : ''}</p>
+                            <p className={`font-mono font-bold text-sm ${trade.pips >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{trade.pips > 0 ? (isIndian ? '₹' : '+') : '-'}{Math.abs(trade.pips).toFixed(1)}{isIndian ? '' : ''}</p>
+                            <p className="text-[9px] text-slate-400 font-mono">{trade.slPips ? `SL ${isIndian ? '₹' : ''}${trade.slPips}` : ''} {trade.tpPips ? `TP ${isIndian ? '₹' : ''}${trade.tpPips}` : ''}</p>
                           </div>
                         </div>
                         {trade.notes && <p className="text-[10px] text-slate-400 flex items-center gap-1 mt-1"><FileText size={10} />{trade.notes}</p>}
@@ -418,7 +430,7 @@ export default function App() {
                           <th className="px-4 py-3">Session</th>
                           <th className="px-4 py-3">Setup</th>
                           <th className="px-4 py-3 text-center">Result</th>
-                          <th className="px-4 py-3 text-right">Pips</th>
+                          <th className="px-4 py-3 text-right">{isIndian ? "Rs." : "Pips"}</th>
                           <th className="px-4 py-3 text-right">Duration</th>
                           <th className="px-4 py-3 text-center">Screenshot</th>
                         </tr>
@@ -439,8 +451,8 @@ export default function App() {
                               <span className={`inline-flex items-center justify-center w-6 h-6 rounded-lg text-xs font-black ${trade.result === 'Win' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>{trade.result[0]}</span>
                             </td>
                             <td className="px-4 py-3 text-right">
-                              <div className={`font-mono font-bold text-xs ${trade.pips >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{trade.pips > 0 ? '+' : ''}{trade.pips.toFixed(1)}</div>
-                              <div className="text-[9px] text-slate-400 font-mono">{trade.slPips ? `${trade.slPips} SL` : ''}{trade.tpPips ? ` | ${trade.tpPips} TP` : ''}</div>
+                              <div className={`font-mono font-bold text-xs ${trade.pips >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{trade.pips > 0 ? (isIndian ? '₹' : '+') : '-'}{Math.abs(trade.pips).toFixed(1)}</div>
+                              <div className="text-[9px] text-slate-400 font-mono">{trade.slPips ? `${isIndian ? '₹' : ''}${trade.slPips} SL` : ''}{trade.tpPips ? ` | ${isIndian ? '₹' : ''}${trade.tpPips} TP` : ''}</div>
                             </td>
                             <td className="px-4 py-3 text-right text-[10px] text-slate-500 font-mono font-bold">{trade.durationMinutes}m</td>
                             <td className="px-4 py-3 text-center">
@@ -498,16 +510,16 @@ export default function App() {
             </div>
           </div>
           <div>
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Pips</label>
-            <input type="number" step="0.1" required placeholder="0.0" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-2xl font-bold font-mono focus:outline-none focus:border-blue-300 text-slate-900" value={newTrade.pips || ''} onChange={e => setNewTrade({ ...newTrade, pips: Number(e.target.value) })} />
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">{isIndian ? "Amount (Rs.)" : "Pips"}</label>
+            <input type="number" step="0.1" required placeholder={isIndian ? "₹0.00" : "0.0"} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-2xl font-bold font-mono focus:outline-none focus:border-blue-300 text-slate-900" value={newTrade.pips || ''} onChange={e => setNewTrade({ ...newTrade, pips: Number(e.target.value) })} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">SL Pips</label>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">{isIndian ? "SL (Rs.)" : "SL Pips"}</label>
               <input type="number" step="0.1" placeholder="0.0" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold font-mono focus:outline-none" value={newTrade.slPips || ''} onChange={e => setNewTrade({ ...newTrade, slPips: Number(e.target.value) })} />
             </div>
             <div>
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">TP Pips</label>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">{isIndian ? "TP (Rs.)" : "TP Pips"}</label>
               <input type="number" step="0.1" placeholder="0.0" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold font-mono focus:outline-none" value={newTrade.tpPips || ''} onChange={e => setNewTrade({ ...newTrade, tpPips: Number(e.target.value) })} />
             </div>
           </div>
@@ -531,6 +543,13 @@ export default function App() {
       {/* Strategy Modal */}
       <Modal isOpen={isAddingStrategyMode} onClose={() => setIsAddingStrategyMode(false)} title="New Strategy">
         <form onSubmit={handleAddStrategy} className="space-y-4">
+          <div>
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Market Scope</label>
+            <div className="flex gap-2 p-1 bg-slate-50 rounded-xl border border-slate-200">
+              <button type="button" onClick={() => setNewStrategy({ ...newStrategy, marketScope: 'indian' })} className={`flex-1 py-2.5 text-xs font-black rounded-lg transition-all uppercase tracking-wider flex items-center justify-center gap-1.5 ${newStrategy.marketScope === 'indian' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-400'}`}>🇮🇳 Indian Market</button>
+              <button type="button" onClick={() => setNewStrategy({ ...newStrategy, marketScope: 'global' })} className={`flex-1 py-2.5 text-xs font-black rounded-lg transition-all uppercase tracking-wider flex items-center justify-center gap-1.5 ${newStrategy.marketScope === 'global' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400'}`}>🌐 Global Market</button>
+            </div>
+          </div>
           <div>
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Strategy Name</label>
             <input type="text" required placeholder="e.g. London Divergence" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-100" value={newStrategy.name} onChange={e => setNewStrategy({ ...newStrategy, name: e.target.value })} />
@@ -595,14 +614,20 @@ const sessionColors = (session: string) => {
     case 'London': return 'bg-sky-50 text-sky-600 ring-1 ring-sky-100';
     case 'New York': return 'bg-indigo-50 text-indigo-600 ring-1 ring-indigo-100';
     case 'Asia': return 'bg-amber-50 text-amber-600 ring-1 ring-amber-100';
+    case 'Opening': return 'bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100';
+    case 'Mid Market': return 'bg-blue-50 text-blue-600 ring-1 ring-blue-100';
+    case 'Last Hour': return 'bg-orange-50 text-orange-600 ring-1 ring-orange-100';
     default: return 'bg-slate-50 text-slate-600';
   }
 };
 
-const processSessionData = (trades: Trade[]) => {
-  const sessions: Record<string, { total: number; wins: number }> = { London: { total: 0, wins: 0 }, 'New York': { total: 0, wins: 0 }, Asia: { total: 0, wins: 0 } };
+const processSessionData = (trades: Trade[], isIndian = false) => {
+  const globalSessions: Record<string, { total: number; wins: number }> = { London: { total: 0, wins: 0 }, 'New York': { total: 0, wins: 0 }, Asia: { total: 0, wins: 0 } };
+  const indianSessions: Record<string, { total: number; wins: number }> = { Opening: { total: 0, wins: 0 }, 'Mid Market': { total: 0, wins: 0 }, 'Last Hour': { total: 0, wins: 0 } };
+  const sessions = isIndian ? indianSessions : globalSessions;
   trades.forEach(t => { if (sessions[t.session]) { sessions[t.session].total++; if (t.result === 'Win') sessions[t.session].wins++; } });
-  return Object.entries(sessions).map(([name, data]) => ({ name: name.toUpperCase(), winRate: data.total ? (data.wins / data.total) * 100 : 0 }));
+  const labels: Record<string, string> = { 'Opening': '9:15-11', 'Mid Market': '11-13', 'Last Hour': '13-3:30' };
+  return Object.entries(sessions).map(([name, data]) => ({ name: isIndian ? (labels[name] || name) : name.toUpperCase(), winRate: data.total ? (data.wins / data.total) * 100 : 0 }));
 };
 
 const processDayData = (trades: Trade[]) => {
